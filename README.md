@@ -1,7 +1,7 @@
 # Implementation of DA-RNN
 
-> *Get hands-on experience of implementatio of LSTM in Pytorch for the project;*  
-> *Get familiar to Finacial data with Deep Learning*
+> *Get hands-on experience of implementation of RNN (LSTM) in Pytorch;*  
+> *Get familiar with Finacial data with Deep Learning;*
 
 ## 1. Dataset
 ### 1.1 Download
@@ -17,4 +17,4 @@ In <sup>[1]</sup>, the first 35,100 data points are used as the training set and
 
 ## References
 
-[^1] Yao Qin, Dongjin Song, Haifeng Chen, Wei Cheng, Guofei Jiang, Garrison W. Cottrell. [*"A Dual-Stage Attention-Based Recurrent Neural Network for Time Series Prediction"*](https://arxiv.org/pdf/1704.02971.pdf). arXiv preprint arXiv:1704.02971 (2017).
+[1] Yao Qin, Dongjin Song, Haifeng Chen, Wei Cheng, Guofei Jiang, Garrison W. Cottrell. [*"A Dual-Stage Attention-Based Recurrent Neural Network for Time Series Prediction"*](https://arxiv.org/pdf/1704.02971.pdf). arXiv preprint arXiv:1704.02971 (2017).
