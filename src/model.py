@@ -55,10 +55,8 @@ class Encoder(nn.Module):
             X
 
         """
-        X_tilde = Variable(X.data.new(X.size(
-            0), self.T - 1, self.input_size).zero_())
-        X_encoded = Variable(
-            Variable(X.data.new(X.size(0), self.T - 1, self.input_size).zero_()))
+        X_tilde = Variable(X.data.new(X.size(0), self.T - 1, self.input_size).zero_())
+        X_encoded = Variable(X.data.new(X.size(0), self.T - 1, self.encoder_num_hidden).zero_())
 
         # Eq. 8, parameters not in nn.Linear but to be learnt
         # v_e = torch.nn.Parameter(data=torch.empty(
@@ -76,20 +74,17 @@ class Encoder(nn.Module):
                            s_n.repeat(self.input_size, 1, 1).permute(1, 0, 2),
                            X.permute(0, 2, 1)), dim=2)
 
-            x = self.encoder_attn(x.view(-1, self.input_size))
-
-            # tanh activation
-            e = F.tanh(x)
+            x = self.encoder_attn(x.view(-1, self.encoder_num_hidden * 2 + self.T - 1))
 
             # get weights by softmax
-            alpha = F.softmax(e.view(-1, self.input_size))
+            alpha = F.softmax(x.view(-1, self.input_size))
 
             # get new input for LSTM
             x_tilde = torch.mul(alpha, X[:, t, :])
 
             # encoder LSTM
-            _, final_state = self.encoder_lstm(
-                x_tilde.unsqueeze(0), (h_n, s_n))
+            self.encoder_lstm.flatten_parameters()
+            _, final_state = self.encoder_lstm(x_tilde.unsqueeze(0), (h_n, s_n))
             h_n = final_state[0]
             s_n = final_state[1]
 
@@ -109,12 +104,7 @@ class Encoder(nn.Module):
         """
         # hidden state and cell state [num_layers*num_directions, batch_size, hidden_size]
         # https://pytorch.org/docs/master/nn.html?#lstm
-        if self.parallel:
-            initial_states = Variable(torch.zeros(
-                X.size(0), self.encoder_num_hidden)).cuda()
-        else:
-            initial_states = Variable(torch.zeros(
-                X.size(0), self.encoder_num_hidden))
+        initial_states = Variable(X.data.new(1, X.size(0), self.encoder_num_hidden).zero_())
         return initial_states
 
 
@@ -125,6 +115,7 @@ class Decoder(nn.Module):
         """Initialize a decoder in DA_RNN."""
         super(Decoder, self).__init__()
         self.decoder_num_hidden = decoder_num_hidden
+        self.encoder_num_hidden = encoder_num_hidden
         self.T = T
 
         self.attn_layer = nn.Sequential(nn.Linear(2 * decoder_num_hidden + encoder_num_hidden, encoder_num_hidden),
@@ -148,17 +139,16 @@ class Decoder(nn.Module):
                            c_n.repeat(self.T - 1, 1, 1).permute(1, 0, 2),
                            X_encoed), dim=2)
 
-            # batch_size * T - 1, row sum up to 1
             beta = F.softmax(self.attn_layer(
                 x.view(-1, 2 * self.decoder_num_hidden + self.encoder_num_hidden)).view(-1, self.T - 1))
             # Eqn. 14: compute context vector
             # batch_size * encoder_hidden_size
-            context = torch.bmm(beta.unsqueeze(1), input_encoded)[:, 0, :]
+            context = torch.bmm(beta.unsqueeze(1), X_encoed)[:, 0, :]
             if t < self.T - 1:
                 # Eqn. 15
                 # batch_size * 1
                 y_tilde = self.fc(
-                    torch.cat((context, y_history[:, t].unsqueeze(1)), dim=1))
+                    torch.cat((context, y_prev[:, t].unsqueeze(1)), dim=1))
                 # Eqn. 16: LSTM
                 self.lstm_layer.flatten_parameters()
                 _, final_states = self.lstm_layer(
@@ -183,12 +173,7 @@ class Decoder(nn.Module):
         """
         # hidden state and cell state [num_layers*num_directions, batch_size, hidden_size]
         # https://pytorch.org/docs/master/nn.html?#lstm
-        if self.parallel:
-            initial_states = Variable(torch.zeros(
-                X.size(0), self.encoder_num_hidden)).cuda()
-        else:
-            initial_states = Variable(torch.zeros(
-                X.size(0), self.encoder_num_hidden))
+        initial_states = Variable(X.data.new(1, X.size(0), self.decoder_num_hidden).zero_())
         return initial_states
 
 
@@ -237,6 +222,10 @@ class DA_rnn(nn.Module):
         # Read dataset
         self.X_train, self.y_train, self.X_test, self.y_test, _, _ = train_val_test_split(
             X, y, False)
+
+        # self.y_train = self.y_train.reshape(self.y_train.shape[0], -1)
+        # self.y_test = self.y_test.reshape(self.y_test.shape[0], -1)
+
         self.total_timesteps = X.shape[0]
         self.train_timesteps = self.X_train.shape[0]
         self.test_timesteps = self.X_test.shape[0]
@@ -263,13 +252,12 @@ class DA_rnn(nn.Module):
                 # x = np.zeros((self.T - 1, len(indices), self.input_size))
                 x = np.zeros((len(indices), self.T - 1, self.input_size))
                 y_prev = np.zeros((len(indices), self.T - 1))
-                y_gt = self.y_train[indices[-1] + 1]
+                y_gt = self.y_train[indices + self.T]
 
                 # format x into 3D tensor
                 for bs in range(len(indices)):
-                    x[bs, :, :] = self.X_train[indices[bs]
-                        :(indices[bs] + self.T - 1), :]
-                    y_prev = self.y_train[indices[bs]:indices[bs] + self.T - 1]
+                    x[bs, :, :] = self.X_train[indices[bs]:(indices[bs] + self.T - 1), :]
+                    y_prev[bs, :] = self.y_train[indices[bs]:(indices[bs] + self.T - 1)]
 
                 n_iter += 1
                 idx += self.batch_size
@@ -301,6 +289,9 @@ class DA_rnn(nn.Module):
                         param_group['lr'] = param_group['lr'] * 0.9
                     for param_group in self.decoder_optimizer.param_groups:
                         param_group['lr'] = param_group['lr'] * 0.9
+
+                if n_iter % 100 == 0:
+                    print("Iterations: ", n_iter, "\tLoss: ", self.loss[-1])
 
             # Save files in last iterations
             if epoch == self.epochs - 1:

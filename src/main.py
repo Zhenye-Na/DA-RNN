@@ -34,7 +34,7 @@ parser.add_argument('--nhidden_decoder', type=int, default=128, help='size of hi
 parser.add_argument('--ntimestep', type=int, default=10, help='the number of time steps in the window T [10]')
 
 # Training parameters setting
-parser.add_argument('--epochs', type=int, default=20, help='number of epochs to train [20, 200, 500]')
+parser.add_argument('--epochs', type=int, default=10, help='number of epochs to train [10, 200, 500]')
 parser.add_argument('--resume', type=bool, default=False, help='resume training or not')
 parser.add_argument('--lr', type=float, default=0.001, help='learning rate [0.001] reduced by 0.1 after each 10000 iterations')
 parser.add_argument('--ngpu', type=int, default=0, help='number of GPUs to use')
@@ -42,16 +42,16 @@ parser.add_argument('--cuda', action='store_true', help='enables cuda')
 
 
 parser.add_argument('--manualSeed', type=int, help='manual seed')
-
 opt = parser.parse_args()
+
 
 # Read dataset
 X, y = read_data(opt.dataroot)
 
-
 # Initialize model
 model = DA_rnn(X, y, opt.ntimestep, opt.nhidden_encoder, opt.nhidden_decoder, opt.batchsize, opt.lr, opt.epochs)
 
+# Train
 model.train()
 
 
