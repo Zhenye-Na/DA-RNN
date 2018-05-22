@@ -8,7 +8,7 @@ References:
         arXiv preprint arXiv:1704.02971 (2017).
 
 """
-
+from ops import *
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 from torch.autograd import Variable
@@ -43,7 +43,7 @@ class Encoder(nn.Module):
 
         # Construct Input Attention Mechanism via deterministic attention model
         # Eq. 8: W_e[h_{t-1}; s_{t-1}] + U_e * x^k
-        self.encoder_attn = nn.Linear(in_features=2 * self.encoder_num_hidden + T, out_features=1, bias=True)
+        self.encoder_attn = nn.Linear(in_features=2 * self.encoder_num_hidden, out_features=1, bias=True)
 
     def forward(self, X):
         """forward.
@@ -54,12 +54,17 @@ class Encoder(nn.Module):
         """
         # Eq. 8, parameters not in nn.Linear but to be learnt
         v_e = torch.nn.Parameter(data=torch.empty(self.input_size, self.T).uniform_(0, 1), requires_grad=True)
-        # U_e = torch.nn.Parameter(data=torch.empty(self.T, self.T).uniform_(0, 1) , requires_grad=True)
+        U_e = torch.nn.Parameter(data=torch.empty(self.T, self.T).uniform_(0, 1) , requires_grad=True)
 
         # hidden, cell: initial states with dimention hidden_size
         h_n = self._init_states(X)
         s_n = self._init_states(X)
 
+        for t in range(self.T):
+            # batch_size * input_size * (2*hidden_size + T - 1)
+            x = torch.cat((h_n.repeat(self.input_size, 1, 1).permute(1, 0, 2),
+                           s_n.repeat(self.input_size, 1, 1).permute(1, 0, 2),
+                           X.permute(0, 2, 1)), dim=2)
 
         # e = F.tanh(..)
         # alpha = F.softmax(x.view(-1, self.input_size))
@@ -79,10 +84,10 @@ class Encoder(nn.Module):
         # hidden state and cell state [num_layers*num_directions, batch_size, hidden_size]
         # https://pytorch.org/docs/master/nn.html?#lstm
         if self.parallel:
-            initial_hidden_states = Variable(torch.zeros(1, X.size(0), self.encoder_num_hidden)).cuda()
+            initial_states = Variable(torch.zeros(X.size(0), self.encoder_num_hidden)).cuda()
         else:
-            initial_hidden_states = Variable(torch.zeros(1, X.size(0), self.encoder_num_hidden))
-        return initial_hidden_states
+            initial_states = Variable(torch.zeros(X.size(0), self.encoder_num_hidden))
+        return initial_states
 
 
 class Decoder(nn.Module):
@@ -108,28 +113,67 @@ class Decoder(nn.Module):
 class DA_rnn(nn.Module):
     """da_rnn."""
 
-    def __init__(self, T, encoder_num_hidden, decoder_num_hidden, batch_size, learning_rate=0.001, parallel=False):
+    def __init__(self, X, y, T, encoder_num_hidden, decoder_num_hidden, batch_size, learning_rate=0.001, epochs, parallel=False):
         """da_rnn initialization."""
         super(DA_rnn, self).__init__()
-        self.T = T
         self.encoder_num_hidden = encoder_num_hidden
         self.decoder_num_hidden = decoder_num_hidden
-        self.batch_size = batch_size
         self.learning_rate = learning_rate
+        self.batch_size = batch_size
         self.parallel = parallel
+        self.shuffle = False
+        self.epochs = epochs
+        self.T = T
 
-        # Loss function Mean-Square-Error
+        # Loss function
         self.criterion = nn.MSELoss()
 
         if self.parallel:
             self.encoder = nn.DataParallel(self.encoder)
             self.decoder = nn.DataParallel(self.decoder)
 
-    def fit(self, ):
-        """fit dataset."""
+        # Read dataset
+        self.X_train, self.y_train, self.X_test, self.y_test, _, _ = train_val_test_split(X, y, False)
+        self.total_timestamps = X.shape[0]
+        self.train_timestamps = X_train.shape[0]
+        self.test_timestamps = X_test.shape[0]
+        self.input_size = X.shape[1]
+
+    def train(self):
+        """training process."""
+
+        n_iter = 0
+
+        for epoch in tqdm(range(self.epochs)):
+            if self.shuffle:
+                ref_idx = np.random.permutation(self.total_timestamps - self.T)
+            else:
+                ref_idx = np.array([range(self.total_timestamps - self.T)])
+
+            for idx in ref_idx:
+                indices = list(range(idx, idx + self.batch_size + 1))
+                x = np.zeros((self.T - 1, len(indices), self.input_size))
+                # y_history =
+                y_gt = self.y_train[indices[-1] + self.T]
+
+                n_iter += 1
+
+                if n_iter % 5 == 0 and n_iter > 0:
+                    for param_group in self.encoder_optimizer.param_groups:
+                        param_group['lr'] = param_group['lr'] * 0.9
+                    for param_group in self.decoder_optimizer.param_groups:
+                        param_group['lr'] = param_group['lr'] * 0.9
+
+
+
+
+
+
+    def val(self):
+        """validation."""
         pass
 
-    def predict(self, ):
-        """predict."""
+    def test(self):
+        """test."""
         pass
 
