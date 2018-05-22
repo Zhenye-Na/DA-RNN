@@ -26,7 +26,7 @@ def read_data(input_path):
         y (np.ndarray): ground truth.
 
     """
-    df = pd.read_csv('input_path')
+    df = pd.read_csv(input_path)
     X = df.iloc[:, 0:-1].values
     y = df.iloc[:, -1].values
 
@@ -57,19 +57,21 @@ def train_val_test_split(X, y, is_Val):
         The last 2,730 data points are used as the test set.
     ##########################################################
 
+    Adjusted by making size divided by batch size (128).
+
     """
     # Train set
-    X_train = X[0:35100, :]
-    y_train = y[0:35100]
+    X_train = X[0:35072, :]
+    y_train = y[0:35072]
 
     # Test set
-    X_test = X[37830:, :]
-    y_test = y[37830:]
+    X_test = X[37830:40448, :]
+    y_test = y[37830:40448]
 
     # Val set
     if is_Val:
-        X_val = X[35100:37830, :]
-        y_val = y[35100:37830]
+        X_val = X[35072:37760, :]
+        y_val = y[35072:37760]
     else:
         X_val = np.zeros_like(X_test)
         y_val = np.zeros_like(y_test)
