@@ -53,22 +53,3 @@ model = DA_rnn(X, y, opt.ntimestep, opt.nhidden_encoder, opt.nhidden_decoder, op
 
 # Train
 model.train()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
