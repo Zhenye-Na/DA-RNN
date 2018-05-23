@@ -261,8 +261,8 @@ class DA_rnn(nn.Module):
 
                 # format x into 3D tensor
                 for bs in range(len(indices)):
-                    self.x[bs, :, :] = self.X_train[indices[bs]:(indices[bs] + self.T - 1), :]
-                    y_prev[bs, :] = self.y_train[indices[bs]:(indices[bs] + self.T - 1)]
+                    self.x[bs, :, :] = self.X[indices[bs]:(indices[bs] + self.T - 1), :]
+                    y_prev[bs, :] = self.y[indices[bs]:(indices[bs] + self.T - 1)]
 
                 n_iter += 1
                 idx += self.batch_size
@@ -300,7 +300,7 @@ class DA_rnn(nn.Module):
 
             if epoch % 2 == 0:
                 y_train_pred = self.test(on_train=True)
-                # y_test_pred = self.test(on_train=False)
+                y_test_pred = self.test(on_train=False)
                 y_pred = np.concatenate((y_train_pred, y_test_pred))
                 plt.figure()
                 plt.plot(range(1, 1 + len(self.y_train)),
@@ -358,7 +358,7 @@ class DA_rnn(nn.Module):
                 y_history = Variable(torch.from_numpy(
                     y_history).type(torch.FloatTensor))
                 _, input_encoded = self.Encoder(
-                    Variable(torch.from_numpy(self.X_train).type(torch.FloatTensor)))
+                    Variable(torch.from_numpy(self.x).type(torch.FloatTensor)))
                 y_pred[i:(i + self.batch_size)] = self.Decoder(input_encoded,
                                                                y_history).cpu().data.numpy()[:, 0]
                 i += self.batch_size
@@ -366,7 +366,7 @@ class DA_rnn(nn.Module):
                 y_history = Variable(torch.from_numpy(
                     y_history).type(torch.FloatTensor))
                 _, input_encoded = self.Encoder(
-                    Variable(torch.from_numpy(self.X_test).type(torch.FloatTensor)))
+                    Variable(torch.from_numpy(self.x).type(torch.FloatTensor)))
                 y_pred[i:(i + self.batch_size)] = self.Decoder(input_encoded,
                                                                y_history).cpu().data.numpy()[:, 0]
                 i += self.batch_size
