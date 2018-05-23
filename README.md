@@ -14,7 +14,7 @@
     - [Model](#model)
     - [Experiments and Parameters Settings](#experiments-and-parameters-settings)
         - [NASDAQ 100 Stock dataset]()
-        - [Training procedure & Parameters Settings](#training-procedure-parameters-settings)
+        - [Training procedure & Parameters Settings](#training-procedure--parameters-settings)
 - [References](#references)
 
 
@@ -43,8 +43,9 @@ For the objective, a square loss is used. With these two attention mechanisms, t
     <img src="https://github.com/Zhenye-Na/DA-RNN/blob/master/fig/fig1.png?raw=true" width="100%" class="center">
     <figcaption><center>Figure 1: Graphical illustration of the dual-stage attention-based recurrent neural network.</center></figcaption>
 </figure>
-
-
+  
+  
+  
 The Dual-Stage Attention-Based RNN (a.k.a. DA-RNN) model belongs to the general class of Nonlinear Autoregressive Exogenous (NARX) models, which predict the current value of a time series based on historical values of this series plus the historical values of multiple exogenous time series.
 
 ### LSTM
@@ -84,12 +85,3 @@ In the encoder, they introduced a novel input attention mechanism that can adapt
 "*](https://github.com/YitongCU/Duel-staged-Attention-for-NYC-Weather-prediction)
 [3] Pytorch Forum. [*"Why 3d input tensors in LSTM?"*](https://discuss.pytorch.org/t/why-3d-input-tensors-in-lstm/4455).
 
-
-
-<style>
-.center {
-    display: block;
-    margin-left: auto;
-    margin-right: auto;
-}
-</style>
