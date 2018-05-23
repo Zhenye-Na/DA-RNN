@@ -83,6 +83,6 @@ In the encoder, they introduced a novel input attention mechanism that can adapt
 [1] Yao Qin, Dongjin Song, Haifeng Chen, Wei Cheng, Guofei Jiang, Garrison W. Cottrell. [*"A Dual-Stage Attention-Based Recurrent Neural Network for Time Series Prediction"*](https://arxiv.org/pdf/1704.02971.pdf). arXiv preprint arXiv:1704.02971 (2017).  
 [2] Chandler Zuo. [*"A PyTorch Example to Use RNN for Financial Prediction"*](http://chandlerzuo.github.io/blog/2017/11/darnn). (2017).  
 [3] YitongCU. [*"Dual Staged Attention Model for Time Series prediction
-"*](https://github.com/YitongCU/Duel-staged-Attention-for-NYC-Weather-prediction)
-[3] Pytorch Forum. [*"Why 3d input tensors in LSTM?"*](https://discuss.pytorch.org/t/why-3d-input-tensors-in-lstm/4455).
+"*](https://github.com/YitongCU/Duel-staged-Attention-for-NYC-Weather-prediction).  
+[4] Pytorch Forum. [*"Why 3d input tensors in LSTM?"*](https://discuss.pytorch.org/t/why-3d-input-tensors-in-lstm/4455).
 
