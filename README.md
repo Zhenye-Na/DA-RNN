@@ -70,12 +70,13 @@ In the encoder, they introduced a novel input attention mechanism that can adapt
 
 
 #### Training procedure & Parameters Settings
-|           Optimization method           	|      minibatch stochastic gradient descent (SGD) together with the Adam optimizer      	|
-|:---------------------------------------:	|:--------------------------------------------------------------------------------------:	|
-|   number of time steps in the window T  	|                                         T = 10                                         	|
-| size of hidden states for the encoder m 	|                                     m = p = 64, 128                                    	|
-| size of hidden states for the decoder p 	|                                     m = p = 64, 128                                    	|
-|            Evaluation Metrics           	| $$O(y_T , \hat{y}_T ) = \frac{1}{N} \sum \limits_{i=1}^{N} (y_T^i , \hat{y}_T^i)^2  $$ 	|
+|                 Category                |                                       Description                                      |
+|:---------------------------------------:|:--------------------------------------------------------------------------------------:|
+|           Optimization method           |      minibatch stochastic gradient descent (SGD) together with the Adam optimizer      |
+|   number of time steps in the window T  |                                         T = 10                                         |
+| size of hidden states for the encoder m |                                     m = p = 64, 128                                    |
+| size of hidden states for the decoder p |                                     m = p = 64, 128                                    |
+|            Evaluation Metrics           | $$O(y_T , \hat{y_T} ) = \frac{1}{N} \sum \limits_{i=1}^{N} (y_T^i , \hat{y_T}^i)^2  $$ |
 
 ## References
 
