@@ -26,7 +26,7 @@ def read_data(input_path, debug=True):
         y (np.ndarray): ground truth.
 
     """
-    df = pd.read_csv(input_path, nrows = 100 if debug else None)
+    df = pd.read_csv(input_path, nrows = 250 if debug else None)
     X = df.iloc[:, 0:-1].values
     y = df.iloc[:, -1].values
 
