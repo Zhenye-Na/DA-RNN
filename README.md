@@ -85,4 +85,3 @@ In the encoder, they introduced a novel input attention mechanism that can adapt
 [3] YitongCU. [*"Dual Staged Attention Model for Time Series prediction
 "*](https://github.com/YitongCU/Duel-staged-Attention-for-NYC-Weather-prediction).  
 [4] Pytorch Forum. [*"Why 3d input tensors in LSTM?"*](https://discuss.pytorch.org/t/why-3d-input-tensors-in-lstm/4455).
-
