@@ -15,7 +15,7 @@ import pandas as pd
 # matplotlib.use('Agg')
 
 
-def read_data(input_path):
+def read_data(input_path, debug=True):
     """Read nasdaq stocks data.
 
     Args:
@@ -26,7 +26,7 @@ def read_data(input_path):
         y (np.ndarray): ground truth.
 
     """
-    df = pd.read_csv(input_path)
+    df = pd.read_csv(input_path, nrows = 100 if debug else None)
     X = df.iloc[:, 0:-1].values
     y = df.iloc[:, -1].values
 
@@ -77,8 +77,3 @@ def train_val_test_split(X, y, is_Val):
         y_val = np.zeros_like(y_test)
 
     return X_train, y_train, X_test, y_test, X_val, y_val
-
-
-def plot():
-    """plotting."""
-    pass

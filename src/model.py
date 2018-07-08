@@ -225,22 +225,21 @@ class DA_rnn(nn.Module):
                                             lr=self.learning_rate)
 
         # Read dataset
-        self.X_train, self.y_train, self.X_test, self.y_test, _, _ = train_val_test_split(
-            X, y, False)
+        # self.X_train, self.y_train, self.X_test, self.y_test, _, _ = train_val_test_split(
+        #     X, y, False)
 
         # self.y_train = self.y_train.reshape(self.y_train.shape[0], -1)
         # self.y_test = self.y_test.reshape(self.y_test.shape[0], -1)
 
-        self.total_timesteps = self.X.shape[0]
-        self.train_timesteps = self.X_train.shape[0]
-        self.test_timesteps = self.X_test.shape[0]
+        self.train_timesteps = int(self.X.shape[0] * 0.7)
         self.input_size = self.X.shape[1]
 
     def train(self):
         """training process."""
-        self.loss = []
-        self.y_pred = []
-        self.true = []
+        iter_per_epoch = int(np.ceil(self.train_timesteps * 1. / self.batch_size))
+        self.iter_losses = np.zeros(self.epochs * iter_per_epoch)
+        self.epoch_losses = np.zeros(self.epochs)
+
         n_iter = 0
 
         for epoch in range(self.epochs):
@@ -255,71 +254,78 @@ class DA_rnn(nn.Module):
                 # get the indices of X_train
                 indices = ref_idx[idx:(idx + self.batch_size)]
                 # x = np.zeros((self.T - 1, len(indices), self.input_size))
-                self.x = np.zeros((len(indices), self.T - 1, self.input_size))
+                x = np.zeros((len(indices), self.T - 1, self.input_size))
                 y_prev = np.zeros((len(indices), self.T - 1))
-                y_gt = self.y_train[indices + self.T]
+                y_gt = self.y[indices + self.T]
 
                 # format x into 3D tensor
                 for bs in range(len(indices)):
-                    self.x[bs, :, :] = self.X[indices[bs]:(indices[bs] + self.T - 1), :]
+                    x[bs, :, :] = self.X[indices[bs]:(indices[bs] + self.T - 1), :]
                     y_prev[bs, :] = self.y[indices[bs]:(indices[bs] + self.T - 1)]
 
-                n_iter += 1
+                loss = self.train_forward(x, y_prev, y_gt)
+                self.iter_losses[epoch * iter_per_epoch + idx / self.batch_size] = loss
+
                 idx += self.batch_size
+                n_iter += 1
 
-                # zero gradients
-                self.encoder_optimizer.zero_grad()
-                self.decoder_optimizer.zero_grad()
-
-                input_weighted, input_encoded = self.Encoder(
-                    Variable(torch.from_numpy(self.x).type(torch.FloatTensor)))
-                y_pred = self.Decoder(input_encoded, Variable(
-                    torch.from_numpy(y_prev).type(torch.FloatTensor)))
-
-                y_true = Variable(torch.from_numpy(
-                    y_gt).type(torch.FloatTensor))
-
-                self.y_true = y_true
-                self.y_pred = y_pred
-
-                loss = self.criterion(y_pred, y_true)
-                self.loss.append(loss.data[0])
-                loss.backward()
-
-                self.encoder_optimizer.step()
-                self.decoder_optimizer.step()
-
-                if n_iter % 500 == 0 and n_iter != 0:
+                if n_iter % 50000 == 0 and n_iter != 0:
                     for param_group in self.encoder_optimizer.param_groups:
                         param_group['lr'] = param_group['lr'] * 0.9
                     for param_group in self.decoder_optimizer.param_groups:
                         param_group['lr'] = param_group['lr'] * 0.9
 
-                if n_iter % 10 == 0:
-                    print("Iterations: ", n_iter, "\tLoss: ", self.loss[-1])
+                self.epoch_losses[epoch] = np.mean(self.iter_losses[range(epoch * iter_per_epoch, (epoch + 1) * iter_per_epoch)])
 
-            if epoch % 2 == 0:
-                y_train_pred = self.test(on_train=True)
-                y_test_pred = self.test(on_train=False)
-                y_pred = np.concatenate((y_train_pred, y_test_pred))
-                plt.figure()
-                plt.plot(range(1, 1 + len(self.y_train)),
-                         self.y_train, label="True")
-                plt.plot(range(self.T, len(y_train_pred) + self.T),
-                         y_train_pred, label='Predicted - Train')
-                plt.plot(range(self.T + len(y_test_pred), len(self.y_test) + 1),
-                         y_test_pred, label='Predicted - Test')
-                plt.legend(loc='upper left')
-                plt.savefig("plot_" + str(epoch) + ".png")
-                plt.close(fig)
+            if epoch % 10 == 0:
+                print "Iterations: ", n_iter, " Loss: ", self.epoch_losses[epoch]
+
+            # if epoch % 10 == 0:
+            #     y_train_pred = self.test(on_train=True)
+            #     y_test_pred = self.test(on_train=False)
+            #     y_pred = np.concatenate((y_train_pred, y_test_pred))
+            #     plt.ioff()
+            #     plt.figure()
+            #     plt.plot(range(1, 1 + len(self.y)),
+            #              self.y, label="True")
+            #     plt.plot(range(self.T, len(y_train_pred) + self.T),
+            #              y_train_pred, label='Predicted - Train')
+            #     plt.plot(range(self.T + len(y_train_pred), len(self.y) + 1),
+            #              y_test_pred, label='Predicted - Test')
+            #     plt.legend(loc='upper left')
+            #     plt.show()
+
 
             # Save files in last iterations
-            if epoch == self.epochs - 1:
-                np.savetxt('../loss.txt', np.array(self.loss), delimiter=',')
-                np.savetxt('../y_pred.txt',
-                           np.array(self.y_pred), delimiter=',')
-                np.savetxt('../y_true.txt',
-                           np.array(self.y_true), delimiter=',')
+            # if epoch == self.epochs - 1:
+            #     np.savetxt('../loss.txt', np.array(self.epoch_losses), delimiter=',')
+            #     np.savetxt('../y_pred.txt',
+            #                np.array(self.y_pred), delimiter=',')
+            #     np.savetxt('../y_true.txt',
+            #                np.array(self.y_true), delimiter=',')
+
+
+    def train_forward(self, X, y_prev, y_gt):
+        # zero gradients
+        self.encoder_optimizer.zero_grad()
+        self.decoder_optimizer.zero_grad()
+
+        input_weighted, input_encoded = self.Encoder(
+            Variable(torch.from_numpy(X).type(torch.FloatTensor)))
+        y_pred = self.Decoder(input_encoded, Variable(
+            torch.from_numpy(y_prev).type(torch.FloatTensor)))
+
+        y_true = Variable(torch.from_numpy(
+            y_gt).type(torch.FloatTensor))
+
+        y_true = y_true.view(-1, 1)
+        loss = self.criterion(y_pred, y_true)
+        loss.backward()
+
+        self.encoder_optimizer.step()
+        self.decoder_optimizer.step()
+
+        return loss.item()
 
     def val(self):
         """validation."""
@@ -327,47 +333,29 @@ class DA_rnn(nn.Module):
 
     def test(self, on_train=False):
         """test."""
+
         if on_train:
             y_pred = np.zeros(self.train_timesteps - self.T + 1)
         else:
-            y_pred = np.zeros(self.X_test.shape[0] - self.test_timesteps)
+            y_pred = np.zeros(self.X.shape[0] - self.train_timesteps)
 
         i = 0
         while i < len(y_pred):
-            batch_idx = np.array(range(len(y_pred)))[i: (i + self.batch_size)]
-
-            if on_train:
-                X = np.zeros((len(batch_idx), self.T - 1, self.X_train.shape[1]))
-            else:
-                X = np.zeros((len(batch_idx), self.T - 1, self.X_test.shape[1]))
-
+            batch_idx = np.array(range(len(y_pred)))[i : (i + self.batch_size)]
+            X = np.zeros((len(batch_idx), self.T - 1, self.X.shape[1]))
             y_history = np.zeros((len(batch_idx), self.T - 1))
+
             for j in range(len(batch_idx)):
                 if on_train:
-                    X[j, :, :] = self.X_train[range(
-                        batch_idx[j], batch_idx[j] + self.T - 1), :]
-                    y_history[j, :] = self.y_train[range(
-                        batch_idx[j], batch_idx[j] + self.T - 1)]
+                    X[j, :, :] = self.X[range(batch_idx[j], batch_idx[j] + self.T - 1), :]
+                    y_history[j, :] = self.y[range(batch_idx[j],  batch_idx[j]+ self.T - 1)]
                 else:
-                    X[j, :, :] = self.X_test[range(
-                        batch_idx[j] + self.test_timesteps - self.T, batch_idx[j] + self.test_timesteps - 1), :]
-                    y_history[j, :] = self.y_test[range(
-                        batch_idx[j] + self.test_timesteps - self.T, batch_idx[j] + self.test_timesteps - 1)]
+                    X[j, :, :] = self.X[range(batch_idx[j] + self.train_timesteps - self.T, batch_idx[j] + self.train_timesteps - 1), :]
+                    y_history[j, :] = self.y[range(batch_idx[j] + self.train_timesteps - self.T,  batch_idx[j]+ self.train_timesteps - 1)]
 
-            if on_train:
-                y_history = Variable(torch.from_numpy(
-                    y_history).type(torch.FloatTensor))
-                _, input_encoded = self.Encoder(
-                    Variable(torch.from_numpy(self.x).type(torch.FloatTensor)))
-                y_pred[i:(i + self.batch_size)] = self.Decoder(input_encoded,
-                                                               y_history).cpu().data.numpy()[:, 0]
-                i += self.batch_size
-            else:
-                y_history = Variable(torch.from_numpy(
-                    y_history).type(torch.FloatTensor))
-                _, input_encoded = self.Encoder(
-                    Variable(torch.from_numpy(self.x).type(torch.FloatTensor)))
-                y_pred[i:(i + self.batch_size)] = self.Decoder(input_encoded,
-                                                               y_history).cpu().data.numpy()[:, 0]
-                i += self.batch_size
+            y_history = Variable(torch.from_numpy(y_history).type(torch.FloatTensor))
+            _, input_encoded = self.Encoder(Variable(torch.from_numpy(X).type(torch.FloatTensor)))
+            y_pred[i:(i + self.batch_size)] = self.Decoder(input_encoded, y_history).cpu().data.numpy()[:, 0]
+            i += self.batch_size
+
         return y_pred

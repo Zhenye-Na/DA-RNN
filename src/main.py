@@ -13,7 +13,7 @@ from torch import optim
 import torch.nn.functional as F
 import matplotlib.pyplot as plt
 
-from tqdm import tqdm
+# from tqdm import tqdm
 from torch.autograd import Variable
 
 from ops import *
@@ -46,10 +46,31 @@ opt = parser.parse_args()
 
 
 # Read dataset
-X, y = read_data(opt.dataroot)
+X, y = read_data(opt.dataroot, debug=False)
 
 # Initialize model
 model = DA_rnn(X, y, opt.ntimestep, opt.nhidden_encoder, opt.nhidden_decoder, opt.batchsize, opt.lr, opt.epochs)
 
 # Train
 model.train()
+
+# Prediction
+y_pred = model.test()
+
+fig1 = plt.figure()
+plt.semilogy(range(len(model.iter_losses)), model.iter_losses)
+plt.savefig("1.png")
+plt.close(fig1)
+
+fig2 = plt.figure()
+plt.semilogy(range(len(model.epoch_losses)), model.epoch_losses)
+plt.savefig("2.png")
+plt.close(fig2)
+
+fig3 = plt.figure()
+plt.plot(y_pred, label = 'Predicted')
+plt.plot(model.y[model.train_timesteps:], label = "True")
+plt.legend(loc = 'upper left')
+plt.savefig("3.png")
+plt.close(fig3)
+print('Finished Training')
