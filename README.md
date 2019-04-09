@@ -1,4 +1,10 @@
-# Implementation of DA-RNN
+# PyTorch Implementation of DA-RNN
+
+```
+This repository is currently being refactored to fix training error and to replicate model result. Any PR will be highly appreciated! > <
+```
+
+
 
 > *Get hands-on experience of implementation of RNN (LSTM) in Pytorch;*  
 > *Get familiar with Finacial data with Deep Learning;*
@@ -8,6 +14,9 @@
 - [Dataset](#dataset)
     - [Download](#download)
     - [Description](#description)
+- [Usage](#usage)
+    - [Train](#train)
+    - [Result](#result)
 - [DA-RNN](#da-rnn)
     - [LSTM](#lstm)
     - [Attention Mechanism](#attention-mechanism)
@@ -30,6 +39,49 @@ Some of the corporations under `NASDAQ 100` are not included in this dataset bec
 
 In <sup>[1]</sup>, the first 35,100 data points are used as the training set and the following 2,730 data points are used as the validation set. The last 2,730 data points are used as the test set.
 
+
+
+## Usage
+
+### Train
+
+```
+usage: main.py [-h] [--dataroot DATAROOT] [--batchsize BATCHSIZE]
+               [--nhidden_encoder NHIDDEN_ENCODER]
+               [--nhidden_decoder NHIDDEN_DECODER] [--ntimestep NTIMESTEP]
+               [--epochs EPOCHS] [--lr LR]
+
+PyTorch implementation of paper 'A Dual-Stage Attention-Based Recurrent Neural
+Network for Time Series Prediction'
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --dataroot DATAROOT   path to dataset
+  --batchsize BATCHSIZE
+                        input batch size [128]
+  --nhidden_encoder NHIDDEN_ENCODER
+                        size of hidden states for the encoder m [64, 128]
+  --nhidden_decoder NHIDDEN_DECODER
+                        size of hidden states for the decoder p [64, 128]
+  --ntimestep NTIMESTEP
+                        the number of time steps in the window T [10]
+  --epochs EPOCHS       number of epochs to train [10, 200, 500]
+  --lr LR               learning rate [0.001] reduced by 0.1 after each 10000
+                        iterations
+```
+
+An example of training process is as follows:
+
+```
+python3 main --lr 0.0001 --epochs 50
+```
+
+### Result
+
+TBD;
+
+
+
 ## DA-RNN
 
 In the paper [*"A Dual-Stage Attention-Based Recurrent Neural Network for Time Series Prediction"*](https://arxiv.org/pdf/1704.02971.pdf). 
@@ -44,13 +96,13 @@ For the objective, a square loss is used. With these two attention mechanisms, t
     <figcaption><center>Figure 1: Graphical illustration of the dual-stage attention-based recurrent neural network.</center></figcaption>
 </figure>
   
-  
-  
+
+
 The Dual-Stage Attention-Based RNN (a.k.a. DA-RNN) model belongs to the general class of Nonlinear Autoregressive Exogenous (NARX) models, which predict the current value of a time series based on historical values of this series plus the historical values of multiple exogenous time series.
 
 ### LSTM
 
-Recursive Neural Network model has been used in this paper. RNN models are powerful to exhibit quite sophisticated dynamic temporal structure for sequential data. RNN models come in many forms, one of which is the Long-Short Term Memory(LSTM) model that is widely applied in language models. 
+Recursive Neural Network model has been used in this paper. RNN models are powerful to exhibit quite sophisticated dynamic temporal structure for sequential data. RNN models come in many forms, one of which is the Long-Short Term Memory (LSTM) model that is widely applied in language models. 
 
 
 ### Attention Mechanism
