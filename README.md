@@ -1,7 +1,9 @@
 # PyTorch Implementation of DA-RNN
 
 ```
-This repository is currently being refactored to fix training error and to replicate model result. Any PR will be highly appreciated! > <
+This repository is currently being refactored to fix training error and to replicate model result.
+
+Any PR will be highly appreciated! > <
 ```
 
 
@@ -90,12 +92,10 @@ They proposes a novel dual-stage attention-based recurrent neural network (DA-RN
 
 For the objective, a square loss is used. With these two attention mechanisms, the DA-RNN can adaptively select the most relevant input features and capture the long-term temporal dependencies of a time series. A graphical illustration of the proposed model is shown in Figure 1.
 
-
-<figure>
-    <img src="https://github.com/Zhenye-Na/DA-RNN/blob/master/fig/fig1.png?raw=true" width="100%" class="center">
-    <figcaption><center>Figure 1: Graphical illustration of the dual-stage attention-based recurrent neural network.</center></figcaption>
-</figure>
-  
+<div align="center">
+    <img src="https://github.com/Zhenye-Na/DA-RNN/blob/master/fig/fig1.png?raw=true" >
+    <p>Figure 1: Graphical illustration of the dual-stage attention-based recurrent neural network.</p>
+</div>
 
 
 The Dual-Stage Attention-Based RNN (a.k.a. DA-RNN) model belongs to the general class of Nonlinear Autoregressive Exogenous (NARX) models, which predict the current value of a time series based on historical values of this series plus the historical values of multiple exogenous time series.
