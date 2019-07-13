@@ -1,3 +1,4 @@
+import matplotlib.pyplot as plt
 """DA-RNN model initialization.
 
 @author Zhenye Na 05/21/2018
@@ -17,9 +18,8 @@ from torch import nn
 from torch import optim
 import torch.nn.functional as F
 
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
+device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+print("==> Use accelerator: ", device)
 
 
 class Encoder(nn.Module):
@@ -38,12 +38,17 @@ class Encoder(nn.Module):
 
         # Fig 1. Temporal Attention Mechanism: Encoder is LSTM
         self.encoder_lstm = nn.LSTM(
-            input_size=self.input_size, hidden_size=self.encoder_num_hidden)
+            input_size=self.input_size,
+            hidden_size=self.encoder_num_hidden
+        )
 
         # Construct Input Attention Mechanism via deterministic attention model
         # Eq. 8: W_e[h_{t-1}; s_{t-1}] + U_e * x^k
         self.encoder_attn = nn.Linear(
-            in_features=2 * self.encoder_num_hidden + self.T - 1, out_features=1, bias=True)
+            in_features=2 * self.encoder_num_hidden + self.T - 1,
+            out_features=1,
+            bias=True
+        )
 
     def forward(self, X):
         """forward.
@@ -84,8 +89,7 @@ class Encoder(nn.Module):
 
             # encoder LSTM
             self.encoder_lstm.flatten_parameters()
-            _, final_state = self.encoder_lstm(
-                x_tilde.unsqueeze(0), (h_n, s_n))
+            _, final_state = self.encoder_lstm(x_tilde.unsqueeze(0), (h_n, s_n))
             h_n = final_state[0]
             s_n = final_state[1]
 
@@ -120,11 +124,15 @@ class Decoder(nn.Module):
         self.encoder_num_hidden = encoder_num_hidden
         self.T = T
 
-        self.attn_layer = nn.Sequential(nn.Linear(2 * decoder_num_hidden + encoder_num_hidden, encoder_num_hidden),
-                                        nn.Tanh(),
-                                        nn.Linear(encoder_num_hidden, 1))
+        self.attn_layer = nn.Sequential(
+            nn.Linear(2 * decoder_num_hidden + encoder_num_hidden, encoder_num_hidden),
+            nn.Tanh(),
+            nn.Linear(encoder_num_hidden, 1)
+        )
         self.lstm_layer = nn.LSTM(
-            input_size=1, hidden_size=decoder_num_hidden)
+            input_size=1,
+            hidden_size=decoder_num_hidden
+        )
         self.fc = nn.Linear(encoder_num_hidden + 1, 1)
         self.fc_final = nn.Linear(decoder_num_hidden + encoder_num_hidden, 1)
 
@@ -143,6 +151,7 @@ class Decoder(nn.Module):
 
             beta = F.softmax(self.attn_layer(
                 x.view(-1, 2 * self.decoder_num_hidden + self.encoder_num_hidden)).view(-1, self.T - 1))
+
             # Eqn. 14: compute context vector
             # batch_size * encoder_hidden_size
             context = torch.bmm(beta.unsqueeze(1), X_encoed)[:, 0, :]
@@ -151,6 +160,7 @@ class Decoder(nn.Module):
                 # batch_size * 1
                 y_tilde = self.fc(
                     torch.cat((context, y_prev[:, t].unsqueeze(1)), dim=1))
+
                 # Eqn. 16: LSTM
                 self.lstm_layer.flatten_parameters()
                 _, final_states = self.lstm_layer(
@@ -159,6 +169,7 @@ class Decoder(nn.Module):
                 d_n = final_states[0]
                 # 1 * batch_size * decoder_num_hidden
                 c_n = final_states[1]
+
         # Eqn. 22: final output
         y_pred = self.fc_final(torch.cat((d_n[0], context), dim=1))
 
@@ -205,10 +216,10 @@ class DA_rnn(nn.Module):
 
         self.Encoder = Encoder(input_size=X.shape[1],
                                encoder_num_hidden=encoder_num_hidden,
-                               T=T)
+                               T=T).to(device)
         self.Decoder = Decoder(encoder_num_hidden=encoder_num_hidden,
                                decoder_num_hidden=decoder_num_hidden,
-                               T=T)
+                               T=T).to(device)
 
         # Loss function
         self.criterion = nn.MSELoss()
@@ -255,33 +266,34 @@ class DA_rnn(nn.Module):
                 # format x into 3D tensor
                 for bs in range(len(indices)):
                     x[bs, :, :] = self.X[indices[bs]:(indices[bs] + self.T - 1), :]
-                    y_prev[bs, :] = self.y[indices[bs]:(indices[bs] + self.T - 1)]
+                    y_prev[bs, :] = self.y[indices[bs]: (indices[bs] + self.T - 1)]
 
                 loss = self.train_forward(x, y_prev, y_gt)
-                self.iter_losses[epoch * iter_per_epoch + idx / self.batch_size] = loss
+                self.iter_losses[int(epoch * iter_per_epoch + idx / self.batch_size)] = loss
 
                 idx += self.batch_size
                 n_iter += 1
 
-                if n_iter % 50000 == 0 and n_iter != 0:
+                if n_iter % 10000 == 0 and n_iter != 0:
                     for param_group in self.encoder_optimizer.param_groups:
                         param_group['lr'] = param_group['lr'] * 0.9
                     for param_group in self.decoder_optimizer.param_groups:
                         param_group['lr'] = param_group['lr'] * 0.9
 
-                self.epoch_losses[epoch] = np.mean(self.iter_losses[range(epoch * iter_per_epoch, (epoch + 1) * iter_per_epoch)])
+                self.epoch_losses[epoch] = np.mean(self.iter_losses[range(
+                    epoch * iter_per_epoch, (epoch + 1) * iter_per_epoch)])
 
             if epoch % 10 == 0:
-                print "Epochs: ", epoch, " Iterations: ", n_iter, " Loss: ", self.epoch_losses[epoch]
+                print("Epochs: ", epoch, " Iterations: ", n_iter,
+                      " Loss: ", self.epoch_losses[epoch])
 
-            if epoch == self.epochs - 1:
+            if epoch % 10 == 0:
                 y_train_pred = self.test(on_train=True)
                 y_test_pred = self.test(on_train=False)
                 y_pred = np.concatenate((y_train_pred, y_test_pred))
                 plt.ioff()
                 plt.figure()
-                plt.plot(range(1, 1 + len(self.y)),
-                         self.y, label="True")
+                plt.plot(range(1, 1 + len(self.y)), self.y, label="True")
                 plt.plot(range(self.T, len(y_train_pred) + self.T),
                          y_train_pred, label='Predicted - Train')
                 plt.plot(range(self.T + len(y_train_pred), len(self.y) + 1),
@@ -289,8 +301,7 @@ class DA_rnn(nn.Module):
                 plt.legend(loc='upper left')
                 plt.show()
 
-
-            # Save files in last iterations
+            # # Save files in last iterations
             # if epoch == self.epochs - 1:
             #     np.savetxt('../loss.txt', np.array(self.epoch_losses), delimiter=',')
             #     np.savetxt('../y_pred.txt',
@@ -298,19 +309,27 @@ class DA_rnn(nn.Module):
             #     np.savetxt('../y_true.txt',
             #                np.array(self.y_true), delimiter=',')
 
-
     def train_forward(self, X, y_prev, y_gt):
+        """
+        Forward pass.
+
+        Args:
+            X:
+            y_prev:
+            y_gt: Ground truth label
+
+        """
         # zero gradients
         self.encoder_optimizer.zero_grad()
         self.decoder_optimizer.zero_grad()
 
         input_weighted, input_encoded = self.Encoder(
-            Variable(torch.from_numpy(X).type(torch.FloatTensor)))
+            Variable(torch.from_numpy(X).type(torch.FloatTensor).to(device)))
         y_pred = self.Decoder(input_encoded, Variable(
-            torch.from_numpy(y_prev).type(torch.FloatTensor)))
+            torch.from_numpy(y_prev).type(torch.FloatTensor).to(device)))
 
         y_true = Variable(torch.from_numpy(
-            y_gt).type(torch.FloatTensor))
+            y_gt).type(torch.FloatTensor).to(device))
 
         y_true = y_true.view(-1, 1)
         loss = self.criterion(y_pred, y_true)
@@ -335,21 +354,28 @@ class DA_rnn(nn.Module):
 
         i = 0
         while i < len(y_pred):
-            batch_idx = np.array(range(len(y_pred)))[i : (i + self.batch_size)]
+            batch_idx = np.array(range(len(y_pred)))[i: (i + self.batch_size)]
             X = np.zeros((len(batch_idx), self.T - 1, self.X.shape[1]))
             y_history = np.zeros((len(batch_idx), self.T - 1))
 
             for j in range(len(batch_idx)):
                 if on_train:
-                    X[j, :, :] = self.X[range(batch_idx[j], batch_idx[j] + self.T - 1), :]
-                    y_history[j, :] = self.y[range(batch_idx[j],  batch_idx[j]+ self.T - 1)]
+                    X[j, :, :] = self.X[range(
+                        batch_idx[j], batch_idx[j] + self.T - 1), :]
+                    y_history[j, :] = self.y[range(
+                        batch_idx[j], batch_idx[j] + self.T - 1)]
                 else:
-                    X[j, :, :] = self.X[range(batch_idx[j] + self.train_timesteps - self.T, batch_idx[j] + self.train_timesteps - 1), :]
-                    y_history[j, :] = self.y[range(batch_idx[j] + self.train_timesteps - self.T,  batch_idx[j]+ self.train_timesteps - 1)]
+                    X[j, :, :] = self.X[range(
+                        batch_idx[j] + self.train_timesteps - self.T, batch_idx[j] + self.train_timesteps - 1), :]
+                    y_history[j, :] = self.y[range(
+                        batch_idx[j] + self.train_timesteps - self.T, batch_idx[j] + self.train_timesteps - 1)]
 
-            y_history = Variable(torch.from_numpy(y_history).type(torch.FloatTensor))
-            _, input_encoded = self.Encoder(Variable(torch.from_numpy(X).type(torch.FloatTensor)))
-            y_pred[i:(i + self.batch_size)] = self.Decoder(input_encoded, y_history).cpu().data.numpy()[:, 0]
+            y_history = Variable(torch.from_numpy(
+                y_history).type(torch.FloatTensor).to(device))
+            _, input_encoded = self.Encoder(
+                Variable(torch.from_numpy(X).type(torch.FloatTensor).to(device)))
+            y_pred[i:(i + self.batch_size)] = self.Decoder(input_encoded,
+                                                           y_history).cpu().data.numpy()[:, 0]
             i += self.batch_size
 
         return y_pred

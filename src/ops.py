@@ -4,15 +4,8 @@
 
 """
 
-
-# from tqdm import tqdm
-# import matplotlib.pyplot as plt
-
 import numpy as np
 import pandas as pd
-
-# import matplotlib
-# matplotlib.use('Agg')
 
 
 def read_data(input_path, debug=True):
@@ -26,7 +19,7 @@ def read_data(input_path, debug=True):
         y (np.ndarray): ground truth.
 
     """
-    df = pd.read_csv(input_path, nrows = 250 if debug else None)
+    df = pd.read_csv(input_path, nrows=250 if debug else None)
     X = df.iloc[:, 0:-1].values
     y = df.iloc[:, -1].values
 

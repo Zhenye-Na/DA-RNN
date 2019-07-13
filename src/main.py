@@ -20,57 +20,76 @@ from ops import *
 from model import *
 
 
-# Parameters settings
-parser = argparse.ArgumentParser(description="DA-RNN")
+def parse_args():
+    """Parse arguments."""
+    # Parameters settings
+    parser = argparse.ArgumentParser(description="PyTorch implementation of paper 'A Dual-Stage Attention-Based Recurrent Neural Network for Time Series Prediction'")
 
-# Dataset setting
-parser.add_argument('--dataroot', type=str, default="../nasdaq/nasdaq100_padding.csv", help='path to dataset')
-parser.add_argument('--workers', type=int, default=2, help='number of data loading workers [2]')
-parser.add_argument('--batchsize', type=int, default=128, help='input batch size [128]')
+    # Dataset setting
+    parser.add_argument('--dataroot', type=str, default="../nasdaq/nasdaq100_padding.csv", help='path to dataset')
+    parser.add_argument('--batchsize', type=int, default=128, help='input batch size [128]')
 
-# Encoder / Decoder parameters setting
-parser.add_argument('--nhidden_encoder', type=int, default=128, help='size of hidden states for the encoder m [64, 128]')
-parser.add_argument('--nhidden_decoder', type=int, default=128, help='size of hidden states for the decoder p [64, 128]')
-parser.add_argument('--ntimestep', type=int, default=10, help='the number of time steps in the window T [10]')
+    # Encoder / Decoder parameters setting
+    parser.add_argument('--nhidden_encoder', type=int, default=128, help='size of hidden states for the encoder m [64, 128]')
+    parser.add_argument('--nhidden_decoder', type=int, default=128, help='size of hidden states for the decoder p [64, 128]')
+    parser.add_argument('--ntimestep', type=int, default=10, help='the number of time steps in the window T [10]')
 
-# Training parameters setting
-parser.add_argument('--epochs', type=int, default=10, help='number of epochs to train [10, 200, 500]')
-parser.add_argument('--resume', type=bool, default=False, help='resume training or not')
-parser.add_argument('--lr', type=float, default=0.001, help='learning rate [0.001] reduced by 0.1 after each 10000 iterations')
-parser.add_argument('--ngpu', type=int, default=0, help='number of GPUs to use')
-parser.add_argument('--cuda', action='store_true', help='enables cuda')
+    # Training parameters setting
+    parser.add_argument('--epochs', type=int, default=10, help='number of epochs to train [10, 200, 500]')
+    parser.add_argument('--lr', type=float, default=0.001, help='learning rate [0.001] reduced by 0.1 after each 10000 iterations')
 
+    # parse the arguments
+    args = parser.parse_args()
 
-parser.add_argument('--manualSeed', type=int, help='manual seed')
-opt = parser.parse_args()
+    return args
 
 
-# Read dataset
-X, y = read_data(opt.dataroot, debug=False)
+def main():
+    """Main pipeline of DA-RNN."""
+    args = parse_args()
 
-# Initialize model
-model = DA_rnn(X, y, opt.ntimestep, opt.nhidden_encoder, opt.nhidden_decoder, opt.batchsize, opt.lr, opt.epochs)
+    # Read dataset
+    print("==> Load dataset ...")
+    X, y = read_data(args.dataroot, debug=False)
 
-# Train
-model.train()
+    # Initialize model
+    print("==> Initialize DA-RNN model ...")
+    model = DA_rnn(
+        X,
+        y,
+        args.ntimestep,
+        args.nhidden_encoder,
+        args.nhidden_decoder,
+        args.batchsize,
+        args.lr,
+        args.epochs
+    )
 
-# Prediction
-y_pred = model.test()
+    # Train
+    print("==> Start training ...")
+    model.train()
 
-fig1 = plt.figure()
-plt.semilogy(range(len(model.iter_losses)), model.iter_losses)
-plt.savefig("1.png")
-plt.close(fig1)
+    # Prediction
+    y_pred = model.test()
 
-fig2 = plt.figure()
-plt.semilogy(range(len(model.epoch_losses)), model.epoch_losses)
-plt.savefig("2.png")
-plt.close(fig2)
+    fig1 = plt.figure()
+    plt.semilogy(range(len(model.iter_losses)), model.iter_losses)
+    plt.savefig("1.png")
+    plt.close(fig1)
 
-fig3 = plt.figure()
-plt.plot(y_pred, label = 'Predicted')
-plt.plot(model.y[model.train_timesteps:], label = "True")
-plt.legend(loc = 'upper left')
-plt.savefig("3.png")
-plt.close(fig3)
-print('Finished Training')
+    fig2 = plt.figure()
+    plt.semilogy(range(len(model.epoch_losses)), model.epoch_losses)
+    plt.savefig("2.png")
+    plt.close(fig2)
+
+    fig3 = plt.figure()
+    plt.plot(y_pred, label='Predicted')
+    plt.plot(model.y[model.train_timesteps:], label="True")
+    plt.legend(loc='upper left')
+    plt.savefig("3.png")
+    plt.close(fig3)
+    print('Finished Training')
+
+
+if __name__ == '__main__':
+    main()

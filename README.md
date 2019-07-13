@@ -1,7 +1,7 @@
 # PyTorch Implementation of DA-RNN
 
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)](http://makeapullrequest.com)
-[![contributions welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat)](https://github.com/dwyl/esta/issues)
+[![contributions welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat-square)](https://github.com/Zhenye-Na/DA-RNN/issues)
 [![HitCount](http://hits.dwyl.io/Zhenye-Na/DA-RNN.svg)](http://hits.dwyl.io/Zhenye-Na/DA-RNN)
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)]()
 
