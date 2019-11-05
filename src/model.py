@@ -1,25 +1,26 @@
-import matplotlib.pyplot as plt
-"""DA-RNN model initialization.
+"""
+DA-RNN model architecture.
 
 @author Zhenye Na 05/21/2018
+@modified 11/05/2019
 
 References:
     [1] Yao Qin, Dongjin Song, Haifeng Chen, Wei Cheng, Guofei Jiang, Garrison W. Cottrell.
         "A Dual-Stage Attention-Based Recurrent Neural Network for Time Series Prediction"
         arXiv preprint arXiv:1704.02971 (2017).
-
+    [2] Chandler Zuo. "A PyTorch Example to Use RNN for Financial Prediction" (2017).
 """
-from ops import *
-from torch.autograd import Variable
+
+import matplotlib.pyplot as plt
 
 import torch
 import numpy as np
+
 from torch import nn
 from torch import optim
-import torch.nn.functional as F
 
-device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-print("==> Use accelerator: ", device)
+from torch.autograd import Variable
+import torch.nn.functional as F
 
 
 class Encoder(nn.Module):
@@ -39,22 +40,22 @@ class Encoder(nn.Module):
         # Fig 1. Temporal Attention Mechanism: Encoder is LSTM
         self.encoder_lstm = nn.LSTM(
             input_size=self.input_size,
-            hidden_size=self.encoder_num_hidden
+            hidden_size=self.encoder_num_hidden,
+            num_layers=1
         )
 
         # Construct Input Attention Mechanism via deterministic attention model
         # Eq. 8: W_e[h_{t-1}; s_{t-1}] + U_e * x^k
         self.encoder_attn = nn.Linear(
             in_features=2 * self.encoder_num_hidden + self.T - 1,
-            out_features=1,
-            bias=True
+            out_features=1
         )
 
     def forward(self, X):
         """forward.
 
         Args:
-            X
+            X: input data
 
         """
         X_tilde = Variable(X.data.new(
@@ -68,12 +69,12 @@ class Encoder(nn.Module):
         # U_e = torch.nn.Parameter(data=torch.empty(
         #     self.T, self.T).uniform_(0, 1), requires_grad=True)
 
-        # hidden, cell: initial states with dimention hidden_size
+        # h_n, s_n: initial states with dimention hidden_size
         h_n = self._init_states(X)
         s_n = self._init_states(X)
 
         for t in range(self.T - 1):
-            # batch_size * input_size * (2*hidden_size + T - 1)
+            # batch_size * input_size * (2 * hidden_size + T - 1)
             x = torch.cat((h_n.repeat(self.input_size, 1, 1).permute(1, 0, 2),
                            s_n.repeat(self.input_size, 1, 1).permute(1, 0, 2),
                            X.permute(0, 2, 1)), dim=2)
@@ -87,9 +88,13 @@ class Encoder(nn.Module):
             # get new input for LSTM
             x_tilde = torch.mul(alpha, X[:, t, :])
 
-            # encoder LSTM
+            # Fix the warning about non-contiguous memory
+            # https://discuss.pytorch.org/t/dataparallel-issue-with-flatten-parameter/8282
             self.encoder_lstm.flatten_parameters()
-            _, final_state = self.encoder_lstm(x_tilde.unsqueeze(0), (h_n, s_n))
+
+            # encoder LSTM
+            _, final_state = self.encoder_lstm(
+                x_tilde.unsqueeze(0), (h_n, s_n))
             h_n = final_state[0]
             s_n = final_state[1]
 
@@ -99,19 +104,9 @@ class Encoder(nn.Module):
         return X_tilde, X_encoded
 
     def _init_states(self, X):
-        """Initialize all 0 hidden states and cell states for encoder.
-
-        Args:
-            X
-        Returns:
-            initial_hidden_states
-
-        """
-        # hidden state and cell state [num_layers*num_directions, batch_size, hidden_size]
+        """Initialize all 0 hidden states and cell states for encoder."""
         # https://pytorch.org/docs/master/nn.html?#lstm
-        initial_states = Variable(X.data.new(
-            1, X.size(0), self.encoder_num_hidden).zero_())
-        return initial_states
+        return Variable(X.data.new(1, X.size(0), self.encoder_num_hidden).zero_())
 
 
 class Decoder(nn.Module):
@@ -125,7 +120,8 @@ class Decoder(nn.Module):
         self.T = T
 
         self.attn_layer = nn.Sequential(
-            nn.Linear(2 * decoder_num_hidden + encoder_num_hidden, encoder_num_hidden),
+            nn.Linear(2 * decoder_num_hidden +
+                      encoder_num_hidden, encoder_num_hidden),
             nn.Tanh(),
             nn.Linear(encoder_num_hidden, 1)
         )
@@ -138,23 +134,23 @@ class Decoder(nn.Module):
 
         self.fc.weight.data.normal_()
 
-    def forward(self, X_encoed, y_prev):
+    def forward(self, X_encoded, y_prev):
         """forward."""
-        d_n = self._init_states(X_encoed)
-        c_n = self._init_states(X_encoed)
+        d_n = self._init_states(X_encoded)
+        c_n = self._init_states(X_encoded)
 
         for t in range(self.T - 1):
 
             x = torch.cat((d_n.repeat(self.T - 1, 1, 1).permute(1, 0, 2),
                            c_n.repeat(self.T - 1, 1, 1).permute(1, 0, 2),
-                           X_encoed), dim=2)
+                           X_encoded), dim=2)
 
             beta = F.softmax(self.attn_layer(
                 x.view(-1, 2 * self.decoder_num_hidden + self.encoder_num_hidden)).view(-1, self.T - 1))
 
             # Eqn. 14: compute context vector
             # batch_size * encoder_hidden_size
-            context = torch.bmm(beta.unsqueeze(1), X_encoed)[:, 0, :]
+            context = torch.bmm(beta.unsqueeze(1), X_encoded)[:, 0, :]
             if t < self.T - 1:
                 # Eqn. 15
                 # batch_size * 1
@@ -165,10 +161,9 @@ class Decoder(nn.Module):
                 self.lstm_layer.flatten_parameters()
                 _, final_states = self.lstm_layer(
                     y_tilde.unsqueeze(0), (d_n, c_n))
-                # 1 * batch_size * decoder_num_hidden
-                d_n = final_states[0]
-                # 1 * batch_size * decoder_num_hidden
-                c_n = final_states[1]
+
+                d_n = final_states[0]  # 1 * batch_size * decoder_num_hidden
+                c_n = final_states[1]  # 1 * batch_size * decoder_num_hidden
 
         # Eqn. 22: final output
         y_pred = self.fc_final(torch.cat((d_n[0], context), dim=1))
@@ -176,23 +171,14 @@ class Decoder(nn.Module):
         return y_pred
 
     def _init_states(self, X):
-        """Initialize all 0 hidden states and cell states for encoder.
-
-        Args:
-            X
-        Returns:
-            initial_hidden_states
-
-        """
+        """Initialize all 0 hidden states and cell states for encoder."""
         # hidden state and cell state [num_layers*num_directions, batch_size, hidden_size]
         # https://pytorch.org/docs/master/nn.html?#lstm
-        initial_states = Variable(X.data.new(
-            1, X.size(0), self.decoder_num_hidden).zero_())
-        return initial_states
+        return Variable(X.data.new(1, X.size(0), self.decoder_num_hidden).zero_())
 
 
-class DA_rnn(nn.Module):
-    """da_rnn."""
+class DA_RNN(nn.Module):
+    """Dual-Stage Attention-Based Recurrent Neural Network."""
 
     def __init__(self, X, y, T,
                  encoder_num_hidden,
@@ -201,8 +187,8 @@ class DA_rnn(nn.Module):
                  learning_rate,
                  epochs,
                  parallel=False):
-        """da_rnn initialization."""
-        super(DA_rnn, self).__init__()
+        """initialization."""
+        super(DA_RNN, self).__init__()
         self.encoder_num_hidden = encoder_num_hidden
         self.decoder_num_hidden = decoder_num_hidden
         self.learning_rate = learning_rate
@@ -214,12 +200,16 @@ class DA_rnn(nn.Module):
         self.X = X
         self.y = y
 
+        self.device = torch.device(
+            'cuda:0' if torch.cuda.is_available() else 'cpu')
+        print("==> Use accelerator: ", self.device)
+
         self.Encoder = Encoder(input_size=X.shape[1],
                                encoder_num_hidden=encoder_num_hidden,
-                               T=T).to(device)
+                               T=T).to(self.device)
         self.Decoder = Decoder(encoder_num_hidden=encoder_num_hidden,
                                decoder_num_hidden=decoder_num_hidden,
-                               T=T).to(device)
+                               T=T).to(self.device)
 
         # Loss function
         self.criterion = nn.MSELoss()
@@ -237,11 +227,13 @@ class DA_rnn(nn.Module):
 
         # Training set
         self.train_timesteps = int(self.X.shape[0] * 0.7)
+        self.y = self.y - np.mean(self.y[:self.train_timesteps])
         self.input_size = self.X.shape[1]
 
     def train(self):
-        """training process."""
-        iter_per_epoch = int(np.ceil(self.train_timesteps * 1. / self.batch_size))
+        """Training process."""
+        iter_per_epoch = int(
+            np.ceil(self.train_timesteps * 1. / self.batch_size))
         self.iter_losses = np.zeros(self.epochs * iter_per_epoch)
         self.epoch_losses = np.zeros(self.epochs)
 
@@ -265,11 +257,13 @@ class DA_rnn(nn.Module):
 
                 # format x into 3D tensor
                 for bs in range(len(indices)):
-                    x[bs, :, :] = self.X[indices[bs]:(indices[bs] + self.T - 1), :]
+                    x[bs, :, :] = self.X[indices[bs]:(
+                        indices[bs] + self.T - 1), :]
                     y_prev[bs, :] = self.y[indices[bs]: (indices[bs] + self.T - 1)]
 
                 loss = self.train_forward(x, y_prev, y_gt)
-                self.iter_losses[int(epoch * iter_per_epoch + idx / self.batch_size)] = loss
+                self.iter_losses[int(
+                    epoch * iter_per_epoch + idx / self.batch_size)] = loss
 
                 idx += self.batch_size
                 n_iter += 1
@@ -301,35 +295,19 @@ class DA_rnn(nn.Module):
                 plt.legend(loc='upper left')
                 plt.show()
 
-            # # Save files in last iterations
-            # if epoch == self.epochs - 1:
-            #     np.savetxt('../loss.txt', np.array(self.epoch_losses), delimiter=',')
-            #     np.savetxt('../y_pred.txt',
-            #                np.array(self.y_pred), delimiter=',')
-            #     np.savetxt('../y_true.txt',
-            #                np.array(self.y_true), delimiter=',')
-
     def train_forward(self, X, y_prev, y_gt):
-        """
-        Forward pass.
-
-        Args:
-            X:
-            y_prev:
-            y_gt: Ground truth label
-
-        """
+        """Forward pass."""
         # zero gradients
         self.encoder_optimizer.zero_grad()
         self.decoder_optimizer.zero_grad()
 
         input_weighted, input_encoded = self.Encoder(
-            Variable(torch.from_numpy(X).type(torch.FloatTensor).to(device)))
+            Variable(torch.from_numpy(X).type(torch.FloatTensor).to(self.device)))
         y_pred = self.Decoder(input_encoded, Variable(
-            torch.from_numpy(y_prev).type(torch.FloatTensor).to(device)))
+            torch.from_numpy(y_prev).type(torch.FloatTensor).to(self.device)))
 
         y_true = Variable(torch.from_numpy(
-            y_gt).type(torch.FloatTensor).to(device))
+            y_gt).type(torch.FloatTensor).to(self.device))
 
         y_true = y_true.view(-1, 1)
         loss = self.criterion(y_pred, y_true)
@@ -340,12 +318,8 @@ class DA_rnn(nn.Module):
 
         return loss.item()
 
-    def val(self):
-        """validation."""
-        pass
-
     def test(self, on_train=False):
-        """test."""
+        """Prediction."""
 
         if on_train:
             y_pred = np.zeros(self.train_timesteps - self.T + 1)
@@ -371,9 +345,9 @@ class DA_rnn(nn.Module):
                         batch_idx[j] + self.train_timesteps - self.T, batch_idx[j] + self.train_timesteps - 1)]
 
             y_history = Variable(torch.from_numpy(
-                y_history).type(torch.FloatTensor).to(device))
+                y_history).type(torch.FloatTensor).to(self.device))
             _, input_encoded = self.Encoder(
-                Variable(torch.from_numpy(X).type(torch.FloatTensor).to(device)))
+                Variable(torch.from_numpy(X).type(torch.FloatTensor).to(self.device)))
             y_pred[i:(i + self.batch_size)] = self.Decoder(input_encoded,
                                                            y_history).cpu().data.numpy()[:, 0]
             i += self.batch_size

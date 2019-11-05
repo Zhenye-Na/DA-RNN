@@ -1,7 +1,14 @@
-"""Main pipeline of DA-RNN.
+"""
+Main pipeline of DA-RNN.
 
 @author Zhenye Na 05/21/2018
+@modified 11/05/2019
 
+References:
+    [1] Yao Qin, Dongjin Song, Haifeng Chen, Wei Cheng, Guofei Jiang, Garrison W. Cottrell.
+        "A Dual-Stage Attention-Based Recurrent Neural Network for Time Series Prediction"
+        arXiv preprint arXiv:1704.02971 (2017).
+    [2] Chandler Zuo. "A PyTorch Example to Use RNN for Financial Prediction" (2017).
 """
 
 import torch
@@ -13,10 +20,9 @@ from torch import optim
 import torch.nn.functional as F
 import matplotlib.pyplot as plt
 
-# from tqdm import tqdm
 from torch.autograd import Variable
 
-from ops import *
+from utils import *
 from model import *
 
 
@@ -54,7 +60,7 @@ def main():
 
     # Initialize model
     print("==> Initialize DA-RNN model ...")
-    model = DA_rnn(
+    model = DA_RNN(
         X,
         y,
         args.ntimestep,
