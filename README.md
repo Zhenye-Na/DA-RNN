@@ -16,13 +16,15 @@
     - [Description](#description)
 - [Usage](#usage)
     - [Train](#train)
-    - [Result](#result)
+- [Result](#result)
+    - [Training Loss](#training-loss)
+    - [Prediction](#prediction)
 - [DA-RNN](#da-rnn)
     - [LSTM](#lstm)
     - [Attention Mechanism](#attention-mechanism)
     - [Model](#model)
     - [Experiments and Parameters Settings](#experiments-and-parameters-settings)
-        - [NASDAQ 100 Stock dataset]()
+        - [NASDAQ 100 Stock dataset](#nasdaq-100-stock-dataset)
         - [Training procedure & Parameters Settings](#training-procedure--parameters-settings)
 - [References](#references)
 
@@ -78,10 +80,26 @@ An example of training process is as follows:
 python3 main --lr 0.0001 --epochs 50
 ```
 
-### Result
+## Result
+
+### Training process
 
 | <img src="https://github.com/Zhenye-Na/DA-RNN/blob/master/fig/result_01.png?raw=true" width="50%"> | <img src="https://github.com/Zhenye-Na/DA-RNN/blob/master/fig/result_02.png?raw=true" width="50%"> |
 |----------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------|
+
+### Training Loss
+
+<div align="center">
+    <img src="https://github.com/Zhenye-Na/DA-RNN/blob/master/fig/loss1.png?raw=true" width="25%">
+    <img src="https://github.com/Zhenye-Na/DA-RNN/blob/master/fig/loss2.png?raw=true" width="25%">
+</div>
+
+
+### Prediction
+
+<div align="center">
+    <img src="https://github.com/Zhenye-Na/DA-RNN/blob/master/fig/prediction.png?raw=true" width="25%">
+</div>
 
 
 ## DA-RNN
