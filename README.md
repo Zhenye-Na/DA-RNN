@@ -9,6 +9,11 @@
 > *Get hands-on experience of implementation of RNN (LSTM) in Pytorch;*  
 > *Get familiar with Finacial data with Deep Learning;*
 
+<div align="center">
+  <a href="https://starchart.cc/Zhenye-Na/DA-RNN"><img src="https://starchart.cc/Zhenye-Na/DA-RNN.svg" alt="Stargazers over time"></a>
+  <p align="center">Stargazers over time</p>
+</div>
+
 ## Table of Contents
 
 - [Dataset](#dataset)
@@ -84,22 +89,19 @@ python3 main --lr 0.0001 --epochs 50
 
 ### Training process
 
-| <img src="https://github.com/Zhenye-Na/DA-RNN/blob/master/fig/result_01.png?raw=true" width="50%"> | <img src="https://github.com/Zhenye-Na/DA-RNN/blob/master/fig/result_02.png?raw=true" width="50%"> |
+| <img src="https://github.com/Zhenye-Na/DA-RNN/blob/master/fig/result_01.png?raw=true" width="80%"> | <img src="https://github.com/Zhenye-Na/DA-RNN/blob/master/fig/result_02.png?raw=true" width="80%"> |
 |----------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------|
 
 ### Training Loss
 
-<div align="center">
-    <img src="https://github.com/Zhenye-Na/DA-RNN/blob/master/fig/loss1.png?raw=true" width="25%">
-    <img src="https://github.com/Zhenye-Na/DA-RNN/blob/master/fig/loss2.png?raw=true" width="25%">
-</div>
+| <img src="https://github.com/Zhenye-Na/DA-RNN/blob/master/fig/loss1.png?raw=true" width="80%"> | <img src="https://github.com/Zhenye-Na/DA-RNN/blob/master/fig/loss2.png?raw=true" width="80%"> |
+|------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------|
 
 
 ### Prediction
 
-<div align="center">
-    <img src="https://github.com/Zhenye-Na/DA-RNN/blob/master/fig/prediction.png?raw=true" width="25%">
-</div>
+| <img src="https://github.com/Zhenye-Na/DA-RNN/blob/master/fig/prediction.png?raw=true" width="80%"> |
+|-----------------------------------------------------------------------------------------------------|
 
 
 ## DA-RNN
